@@ -18,28 +18,47 @@ export default (req: NextApiRequest, res: NextApiResponse) => {
     }
   }
 
+  let boolVariables = new BooleanVariables();
+
   // operators: & (and), | (or), ! (not), = (assignment operator), == (comparison operator)
   function boolInterpreter(expression: string) {
-    let boolVariables = new BooleanVariables();
-
     // break down expression into smaller parts
     let characters = expression.trim().split(" ");
 
     const operands: boolean[] = [];
 
+    // convert each token into a boolean value
     const convertToBool = (arg: string) => {
       if (arg.includes("!")) {
-        let myVal = arg.slice(1, 1);
-        if (myVal == "T") {
-          return false;
+        let myVal = arg.slice(1);
+        if (myVal === "T" || "F") {
+          if (myVal == "T") {
+            return false;
+          } else {
+            return true;
+          }
         } else {
-          return true;
+          // check if the token is a variable and return its value
+          let boolVar = boolVariables.getVar(myVal);
+          if (boolVar !== undefined) {
+            return !boolVar;
+          } else {
+            console.log(`ERROR: ${myVal} has not been declared`);
+          }
         }
       } else {
         if (arg === "T") {
           return true;
-        } else {
+        } else if (arg === "F") {
           return false;
+        } else {
+          // check if the token is a variable and return its value
+          let boolVar = boolVariables.getVar(arg);
+          if (boolVar !== undefined) {
+            return boolVar;
+          } else {
+            console.log(`ERROR: ${arg} has not been declared`);
+          }
         }
       }
     };
@@ -49,99 +68,134 @@ export default (req: NextApiRequest, res: NextApiResponse) => {
       const bracketIndex = [];
 
       expressionArr.forEach((item) => {
-        const isOpeningBrackets = item.includes("(");
-        const isClosingBrackets = item.includes(")");
-        if (isOpeningBrackets) {
+        const hasOpeningBrackets = item.includes("(");
+        const hasClosingBrackets = item.includes(")");
+        if (hasOpeningBrackets) {
           bracketIndex.push(expressionArr.indexOf(item));
-        } else if (isClosingBrackets) {
+        } else if (hasClosingBrackets) {
           bracketIndex.push(expressionArr.indexOf(item));
         }
       });
 
-      const bracketExp = expressionArr.slice(
-        bracketIndex[0],
-        bracketIndex[1] + 1
-      );
+      const allBracketExpressions = bracketIndex.length / 2;
 
-      let openingBr = bracketExp[bracketIndex[0]].replace("(", "");
-      let closingBr = bracketExp[bracketIndex[1]].replace(")", "");
+      if (allBracketExpressions > 0) {
+        console.log(bracketIndex);
+        // extract the expression in parenthesis
+        for (let i = 0; i < allBracketExpressions; i++) {
+          let myBrackets = [];
+          let bracketOperands = [];
 
-      bracketExp[bracketIndex[0]] = openingBr;
-      bracketExp[bracketIndex[1]] = closingBr;
+          expressionArr.forEach((item) => {
+            const hasOpeningBrackets = item.includes("(");
+            const hasClosingBrackets = item.includes(")");
+            if (hasOpeningBrackets) {
+              myBrackets.push(expressionArr.indexOf(item));
+            } else if (hasClosingBrackets) {
+              myBrackets.push(expressionArr.indexOf(item));
+            }
+          });
 
-      console.log(bracketExp);
+          console.log(myBrackets);
 
-      for (let char = 0; char < bracketExp.length; char++) {
-        if (bracketExp[char] === "&") {
-          const char1 =
-            operands.length === 0
-              ? convertToBool(bracketExp[char - 1])
-              : operands.pop();
-          const char2 = convertToBool(bracketExp[char + 1]);
-          operands.push(char1 && char2);
-        } else if (bracketExp[char] === "|") {
-          const char1 =
-            operands.length === 0
-              ? convertToBool(bracketExp[char - 1])
-              : operands.pop();
-          const char2 = convertToBool(bracketExp[char + 1]);
-          operands.push(char1 || char2);
-        } else if (bracketExp[char] === "==") {
-          const char1 =
-            operands.length === 0
-              ? convertToBool(bracketExp[char - 1])
-              : operands.pop();
-          const char2 = convertToBool(bracketExp[char + 1]);
-          operands.push(char1 === char2);
-        }
-      }
-
-      if (operands.length > 0) {
-        // replace bracket expression with a value
-        if (operands[0] === false) {
-          expressionArr.splice(
-            bracketIndex[0],
-            bracketIndex[1] - bracketIndex[0] + 1,
-            "F"
+          const bracketExp = expressionArr.slice(
+            myBrackets[0],
+            myBrackets[1] + 1
           );
-        } else if (operands[0] === true) {
-          expressionArr.splice(
-            bracketIndex[0],
-            bracketIndex[1] - bracketIndex[0] + 1,
-            "T"
-          );
+
+          console.log(bracketExp);
+          console.log(myBrackets[0]);
+
+          bracketExp[0] = bracketExp[0]?.replace("(", "");
+          bracketExp[bracketExp.length - 1] = bracketExp[
+            bracketExp.length - 1
+          ]?.replace(")", "");
+
+          console.log(bracketExp);
+
+          // solve expression in parenthesis
+          for (let char = 0; char < bracketExp.length; char++) {
+            if (bracketExp[char] === "&") {
+              const char1 =
+                bracketOperands.length === 0
+                  ? convertToBool(bracketExp[char - 1])
+                  : bracketOperands.pop();
+              const char2 = convertToBool(bracketExp[char + 1]);
+              bracketOperands.push(char1 && char2);
+              console.log(`pushing ${char1 && char2} to stack`);
+            } else if (bracketExp[char] === "|") {
+              const char1 =
+                bracketOperands.length === 0
+                  ? convertToBool(bracketExp[char - 1])
+                  : bracketOperands.pop();
+              const char2 = convertToBool(bracketExp[char + 1]);
+              bracketOperands.push(char1 || char2);
+              console.log(`pushing ${char1 || char2} to stack`);
+            } else if (bracketExp[char] === "==") {
+              const char1 =
+                bracketOperands.length === 0
+                  ? convertToBool(bracketExp[char - 1])
+                  : bracketOperands.pop();
+              const char2 = convertToBool(bracketExp[char + 1]);
+              bracketOperands.push(char1 === char2);
+            }
+          }
+
+          console.log(bracketOperands);
+
+          // replace parenthesis expression with solved values
+          if (bracketOperands.length > 0) {
+            if (bracketOperands[bracketOperands.length - 1] === false) {
+              expressionArr.splice(
+                myBrackets[0],
+                myBrackets[1] - myBrackets[0] + 1,
+                "F"
+              );
+            } else if (bracketOperands[bracketOperands.length - 1] === true) {
+              expressionArr.splice(
+                myBrackets[0],
+                myBrackets[1] - myBrackets[0] + 1,
+                "T"
+              );
+            }
+          }
+          console.log(expressionArr);
         }
       }
 
-      console.log(expressionArr);
-
-      // solve the remaining part of the equation
-      for (let char = 0; char < expressionArr.length; char++) {
-        if (expressionArr[char] === "&") {
-          const char1 =
-            operands.length === 0
-              ? convertToBool(expressionArr[char - 1])
-              : operands.pop();
-          const char2 = convertToBool(expressionArr[char + 1]);
-          operands.push(char1 && char2);
-        } else if (expressionArr[char] === "|") {
-          const char1 =
-            operands.length === 0
-              ? convertToBool(expressionArr[char - 1])
-              : operands.pop();
-          const char2 = convertToBool(expressionArr[char + 1]);
-          operands.push(char1 || char2);
-        } else if (expressionArr[char] === "==") {
-          const char1 =
-            operands.length === 0
-              ? convertToBool(expressionArr[char - 1])
-              : operands.pop();
-          const char2 = convertToBool(expressionArr[char + 1]);
-          operands.push(char1 === char2);
+      // solve the rest of the expression
+      if (expressionArr.length > 1) {
+        for (let char = 0; char < expressionArr.length; char++) {
+          if (expressionArr[char] === "&") {
+            const char1 =
+              operands.length === 0
+                ? convertToBool(expressionArr[char - 1])
+                : operands.pop();
+            const char2 = convertToBool(expressionArr[char + 1]);
+            operands.push(char1 && char2);
+          } else if (expressionArr[char] === "|") {
+            const char1 =
+              operands.length === 0
+                ? convertToBool(expressionArr[char - 1])
+                : operands.pop();
+            const char2 = convertToBool(expressionArr[char + 1]);
+            operands.push(char1 || char2);
+          } else if (expressionArr[char] === "==") {
+            const char1 =
+              operands.length === 0
+                ? convertToBool(expressionArr[char - 1])
+                : operands.pop();
+            const char2 = convertToBool(expressionArr[char + 1]);
+            operands.push(char1 === char2);
+          } else {
+            operands.push();
+          }
         }
+      } else {
+        operands.push(convertToBool(expressionArr[0]));
       }
 
-      return operands[0];
+      return operands[operands.length - 1];
     };
 
     // check if variable is being declared
@@ -162,5 +216,9 @@ export default (req: NextApiRequest, res: NextApiResponse) => {
     }
   }
 
-  boolInterpreter("(F | T & F) & T");
+  // boolInterpreter("let X = T");
+
+  // boolInterpreter("(T | F)");
+
+  boolInterpreter("(F & T) | (T | F) & (T | F & !F)");
 };
