@@ -66,6 +66,13 @@ export const solveExpression = (
               : bracketOperands.pop();
           const char2 = convertToBool(bracketExp[char + 1], boolVariables);
           bracketOperands.push(char1 === char2);
+        } else if (bracketExp[char] === "!==") {
+          const char1 =
+            bracketOperands.length === 0
+              ? convertToBool(bracketExp[char - 1], boolVariables)
+              : bracketOperands.pop();
+          const char2 = convertToBool(bracketExp[char + 1], boolVariables);
+          bracketOperands.push(char1 !== char2);
         }
       }
 
@@ -112,6 +119,13 @@ export const solveExpression = (
             : operands.pop();
         const char2 = convertToBool(expressionArr[char + 1], boolVariables);
         operands.push(char1 === char2);
+      } else if (expressionArr[char] === "!==") {
+        const char1 =
+          operands.length === 0
+            ? convertToBool(expressionArr[char - 1], boolVariables)
+            : operands.pop();
+        const char2 = convertToBool(expressionArr[char + 1], boolVariables);
+        operands.push(char1 !== char2);
       } else {
         operands.push();
       }
