@@ -8,25 +8,30 @@ const boolInterpreter = (expression: string): string => {
   // break down expression into smaller parts
   let characters = expression.trim().split(" ");
 
+  // initialize stack for storing boolean values
   const operands: boolean[] = [];
 
+  // check if a variable is being declared
   if (characters[0] === "let" && characters.includes("=")) {
     let varExpression = characters.slice(3, characters.length);
 
+    // solve variable expression
     let boolValue = solveExpression(varExpression, operands, boolVariables);
 
     boolVariables.addVar({
       key: characters[1],
       value: boolValue,
     });
+    return operands[0] === undefined
+      ? "AN ERROR OCCURRED"
+      : `${characters[1]}: ${boolValue.toString().toUpperCase()[0]}`;
   } else {
     // solve the expression
-    let boolValue = solveExpression(characters, operands, boolVariables);
+    solveExpression(characters, operands, boolVariables);
+    return operands[0] === undefined
+      ? "AN ERROR OCCURRED"
+      : operands[0].toString();
   }
-
-  return operands[0] === undefined
-    ? "AN ERROR OCCURRED"
-    : operands[0].toString();
 };
 
 export default function Home() {
