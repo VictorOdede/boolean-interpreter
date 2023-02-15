@@ -1,4 +1,4 @@
-# Pesapal Developer Challenge: Boolean interpreter
+# Boolean interpreter
 
 ## Overview
 
